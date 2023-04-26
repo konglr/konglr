@@ -17,7 +17,7 @@ ui <- fluidPage(
       pickerInput(
         inputId = "ticker",
         label = "Ticker Symbol",
-        choices = c("AAPL", "AMZN", "GOOGL", "MSFT", "TSLA"),
+        choices = c("AAPL", "AMZN", "GOOGL", "MSFT", "TSLA","000001.SZ"),
         selected = "AAPL"
       ),
       radioButtons(
@@ -50,10 +50,11 @@ server <- function(input, output) {
               #             from = Sys.Date() - days(input$period),
               #             to = Sys.Date())
     
-    ticker_data <<- getSymbols(input$ticker,
+    ticker_data <<-  reactive({
+                     getSymbols(input$ticker,
                            from = Sys.Date() - days(input$period),
                            to = Sys.Date(), auto.assign = FALSE)
-    
+                                                     })
     # Plot data
     plot_type <- switch(input$plot_type,
                         "line" = "line",
@@ -61,15 +62,16 @@ server <- function(input, output) {
                         "candlesticks" = "candlesticks",
                         "matchsticks" = "matchsticks")
     
-    chartSeries(ticker_data,type = plot_type, name= input$ticker, theme = "white")
+    chartSeries(ticker_data(),type = plot_type, name= input$ticker, 
+                bar.type = "ohlc",theme = "white")
     
    # ggplot(ticker_data, aes(x = date, y = close)) +
      # geom_(color = "black") +
     #  labs(title = input$ticker, x = "Date", y = "Price")
   })
-  
+ 
   # Create a table of the stock data
-  output$data <- renderTable(data.frame(ticker_data), rownames= TRUE, 
+  output$data <- renderTable(data.frame(ticker_data()), spacing = "xs", rownames= TRUE, 
                              striped=TRUE, hover=TRUE, nrow= 10)
 }
 
