@@ -1,7 +1,4 @@
 #
-# This is a Shiny web application. You can run the application by clicking
-# the 'Run App' button above.
-#
 # Find out more about building applications with Shiny here:
 #
 #    http://shiny.rstudio.com/
@@ -26,23 +23,22 @@ ui <- fluidPage(
       radioButtons(
         inputId = "period",
         label = "Time Period",
-        choices = c("1 day" = 1, "5 days" = 5, "1 month" = 30, "3 months" = 90, "1 year" = 365),
-        selected = 1
+        choices = c("5 day" = 5, "10 days" = 10, "1 month" = 30, "3 months" = 90, "1 year" = 365),
+        selected = 5
       ),
       selectInput(
         inputId = "plot_type",
         label = "Plot Type",
-        choices = c("Line" = "line", "Bar" = "bar", "Candlestick" = "candlestick"),
-        selected = "line"
+        choices = c("Line" = "line", "Bars" = "bars", "Candlesticks" = "candlesticks", "Matchsticks"="matchsticks"),
+        selected = "candlesticks"
       )
     ),
     mainPanel(
       plotOutput(outputId = "plot"),
-      plotOutput(outputId = "data")
+      tableOutput(outputId = "data")
     )
   )
 )
-
 # Define server
 server <- function(input, output) {
   output$plot <- renderPlot({
@@ -50,25 +46,31 @@ server <- function(input, output) {
     library(plotly)
     
     # Get data
-    data <- tq_get(input$ticker,
-                   from = Sys.Date() - days(input$period),
-                   to = Sys.Date())
+   # ticker_data <<- tq_get(input$ticker,
+              #             from = Sys.Date() - days(input$period),
+              #             to = Sys.Date())
+    
+    ticker_data <<- getSymbols(input$ticker,
+                           from = Sys.Date() - days(input$period),
+                           to = Sys.Date(), auto.assign = FALSE)
     
     # Plot data
     plot_type <- switch(input$plot_type,
-                        "line" = line,
-                        "bar" = bar,
-                        "candlestick" = candlestick)
+                        "line" = "line",
+                        "bar" = "bars",
+                        "candlesticks" = "candlesticks",
+                        "matchsticks" = "matchsticks")
     
-    ggplot(data, aes(x = date, y = close)) +
-      geom_line(color = "black") +
-      labs(title = input$ticker, x = "Date", y = "Price")
+    chartSeries(ticker_data,type = plot_type, name= input$ticker, theme = "white")
+    
+   # ggplot(ticker_data, aes(x = date, y = close)) +
+     # geom_(color = "black") +
+    #  labs(title = input$ticker, x = "Date", y = "Price")
   })
   
   # Create a table of the stock data
-  output$data <- renderTable({
-    data.frame(data)
-  })
+  output$data <- renderTable(data.frame(ticker_data), rownames= TRUE, 
+                             striped=TRUE, hover=TRUE, nrow= 10)
 }
 
 # Run app
