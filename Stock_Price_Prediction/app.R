@@ -26,8 +26,8 @@ ui <- fluidPage(
       radioButtons(
         inputId = "period",
         label = "Time Period",
-        choices = c("5 day" = 5, "10 days" = 10, "1 month" = 30, "3 months" = 90, "1 year" = 365),
-        selected = 30
+        choices = c("1 day" = 1, "5 days" = 5, "1 month" = 30, "3 months" = 90, "1 year" = 365),
+        selected = 1
       ),
       selectInput(
         inputId = "plot_type",
@@ -38,7 +38,7 @@ ui <- fluidPage(
     ),
     mainPanel(
       plotOutput(outputId = "plot"),
-      tableOutput(outputId = "data")
+      plotOutput(outputId = "data")
     )
   )
 )
@@ -61,20 +61,15 @@ server <- function(input, output) {
                         "candlestick" = candlestick)
     
     ggplot(data, aes(x = date, y = close)) +
-      geom_candlestick() +
+      geom_line(color = "black") +
       labs(title = input$ticker, x = "Date", y = "Price")
-    #chartSeries(data,
-    # type = "plot_type,
-    #  title = input$ticker,
-    #  xlab = "Date",
-    # ylab = "Price")
-    
-    output$data <- renderTable({
-      data <- tq_get(input$ticker,
-                     from = Sys.Date() - days(input$period),
-                     to = Sys.Date())
-      data
-    })
-  }
+  })
   
-  shinyApp(ui = ui, server = server)
+  # Create a table of the stock data
+  output$data <- renderTable({
+    data.frame(data)
+  })
+}
+
+# Run app
+shinyApp(ui = ui, server = server)
