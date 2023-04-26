@@ -10,7 +10,7 @@ library(xts)
 getSymbols("300418.SZ", src="yahoo", auto.assign = TRUE )
 
  ## read data from RDS files
-setwd("/Users/clarkkong/R Projects/Quantmod-master/stock")
+setwd("/Users/clarkkong/R Projects/konglr/stock_prediction")
 saveRDS(`000001.SZ`, file = "000001_yahoo.rds")
 PAYH<- readRDS("000001_yahoo.rds")
 
@@ -75,8 +75,9 @@ for (l in (start_row):(start_row+train_data*days_back- days_back)) {
   
   SMA_51020[(l-start_row+1),,] <- as.matrix(mySMA_matrix[l:(l+days_back-1), 1:3])
 }
+   train_x_merged <- abind(train_x_daily,SMA_51020,along = 3) 
 
-  
+## Test data preparation
 x_test_daily <- array(0, dim = c((test_data-days_back+1), days_back, n_factors))
 dimnames(x_test_daily)[[1]] <- c( rep("", (test_data-days_back+1)))
 y_actual_daily<- array(0, dim = c((test_data-days_back+1), n_factors))
@@ -91,6 +92,8 @@ for (i in (nrow(ticker)-test_data+1):nrow(ticker)-days_back+1) {
 
   x_test_SMA[i-(nrow(ticker)-test_data+1)+1,,]<-c(as.matrix(mySMA_matrix[i:(i+days_back-1),1:3]))
   dimnames(x_test_SMA)[[1]][i-(nrow(ticker)-test_data+1)+1] <- c(as.character(time(mySMA_matrix[(i+days_back-1),])))
+ 
+  x_test_merged <- abind(x_test_daily,x_test_SMA,along = 3) 
   
    if(i== (nrow(ticker)-days_back+1)){ 
       y_actual_daily[i-(nrow(ticker)-test_data+1)+1,]<-as.matrix(ticker[(i+days_back-1), 1:n_factors])}
@@ -108,23 +111,10 @@ for (i in (nrow(ticker)-test_data+1):nrow(ticker)-days_back+1) {
 #scaled_train_y<- scale(train_y_daily)
 #scaled_x_test<-scale(x_test_daily)
 
-# Define the SMA input layer
-sma_input <- layer_input(shape = c(days_back, 3), name = "sma_input")
-
-# Define the main input layer for the existing data
-main_input <- layer_input(shape = c(days_back, n_factors), name = "main_input")
-
-# Merge the two inputs using keras_layer
-merged_input <- layer_concatenate( inputs = list(main_input, sma_input), axis = -1, name = "merged_input")
-
-
 # Define the model
 model <- keras_model_sequential()
 model %>%
-  #layer_concatenate(merged_input) %>%
-  #layer_input(shape = c(32,5,4), name = "main_input")%>%
-  #Define the input layer for the SMA data
-  #layer_input(shape = c(3), batch_shape=c(5,3), name = "sma_input") %>%
+
   bidirectional(layer_lstm(units = 64, return_sequences = TRUE, input_shape = c(days_back, 7))) %>%
   layer_lstm(units = 64, return_sequences = FALSE) %>%
   layer_dense(units = 64, activation = "relu")  %>%
@@ -142,7 +132,7 @@ model %>% compile(
 
 
 history <- model %>% fit(
-  x = merged_data[100:1956,,],
+  x = train_x_merged[100:1956,,],
   y = train_y_daily[100:1956,],
   batch_size = 1,
   epochs = 10,
@@ -151,7 +141,7 @@ history <- model %>% fit(
 )
 
 
-# Save models
+#Save models
 #save_model_hdf5(model,'model_PAYH_5_days.h5')
 #model_5_days<-load_model_hdf5('model_PAYH_5_days.h5')
 #y_pred <- model_5_days %>% predict(x_test_daily,reduce_retracing=True)
@@ -171,7 +161,7 @@ comparingplot_cl <- rbind(comparingplot_cl,pred_row)
 comparingplot_cl[,1:4] <- y_actual_daily[,1:4]
 comparingplot_cl <- cbind(comparingplot_cl, y_pred[,1:4])
 
-par(mfrow=c(2,4))
+par(mfrow=c(4,2))
 plot(comparingplot_cl[,1], type = "l", col = "blue")
 lines(comparingplot_cl[,5], type = "l", col = "red")
 
