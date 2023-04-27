@@ -11,7 +11,7 @@ library(ggplot2)
 library(quantmod)
 # Define UI
 ui <- fluidPage(
-  titlePanel("Stock Price App"),
+  titlePanel("Stock Price Prediction AI股票价格预测"),
   sidebarLayout(
     sidebarPanel(
       pickerInput(
@@ -23,15 +23,19 @@ ui <- fluidPage(
       radioButtons(
         inputId = "period",
         label = "Time Period",
-        choices = c("5 day" = 5, "10 days" = 10, "1 month" = 30, "3 months" = 90, "1 year" = 365),
-        selected = 5
+        choices = c("10 day" = 10, "20 days" = 20, "1 month" = 30, "3 months" = 90, "1 year" = 365),
+        selected = 10
       ),
       selectInput(
         inputId = "plot_type",
         label = "Plot Type",
         choices = c("Line" = "line", "Bars" = "bars", "Candlesticks" = "candlesticks", "Matchsticks"="matchsticks"),
         selected = "candlesticks"
-      )
+      ),
+      
+      radioButtons("radio", label = "Prediction Models",
+                   choices = list("Keras-5 days back" = 1, "Karas-SMA" = 2, "Keras-RSI" = 3), 
+                   selected = 1)
     ),
     mainPanel(
       plotOutput(outputId = "plot"),
@@ -71,8 +75,8 @@ server <- function(input, output) {
   })
  
   # Create a table of the stock data
-  output$data <- renderTable(data.frame(ticker_data()), spacing = "xs", rownames= TRUE, 
-                             striped=TRUE, hover=TRUE, nrow= 10)
+  output$data <- renderTable(data.frame(ticker_data()[tail(1:nrow(ticker_data()), 5), 1:5]), spacing = "xs", rownames= TRUE,
+                             striped=TRUE, hover=TRUE)
 }
 
 # Run app
