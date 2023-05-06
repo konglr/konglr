@@ -11,9 +11,9 @@ library(ggplot2)
 library(quantmod)
 # Define UI
 ui <- fluidPage(
-  titlePanel("Stock Price Prediction AI股票价格预测"),
+  titlePanel("Stock Price Prediction-AI股票价格预测"),
   sidebarLayout(
-    sidebarPanel(
+    sidebarPanel(width = 3,
       pickerInput(
         inputId = "ticker",
         label = "Ticker Symbol",
@@ -37,28 +37,27 @@ ui <- fluidPage(
                    choices = list("Keras-5 days back" = 1, "Karas-SMA" = 2, "Keras-RSI" = 3), 
                    selected = 1)
     ),
-    mainPanel(
+    mainPanel(width = 9,
       plotOutput(outputId = "plot"),
-      tableOutput(outputId = "data")
+      tableOutput(outputId = "data"),
+      textOutput("prediction_result")
     )
   )
 )
 # Define server
 server <- function(input, output) {
+  library(tidyverse)
+  library(plotly)
+  
+  # Get data
+  ticker_data <<-  reactive({
+    getSymbols(input$ticker,
+               from = Sys.Date() - days(input$period),
+               to = Sys.Date(), auto.assign = FALSE)
+  })
+  
   output$plot <- renderPlot({
-    library(tidyverse)
-    library(plotly)
-    
-    # Get data
-   # ticker_data <<- tq_get(input$ticker,
-              #             from = Sys.Date() - days(input$period),
-              #             to = Sys.Date())
-    
-    ticker_data <<-  reactive({
-                     getSymbols(input$ticker,
-                           from = Sys.Date() - days(input$period),
-                           to = Sys.Date(), auto.assign = FALSE)
-                                                     })
+  
     # Plot data
     plot_type <- switch(input$plot_type,
                         "line" = "line",
@@ -67,7 +66,7 @@ server <- function(input, output) {
                         "matchsticks" = "matchsticks")
     
     chartSeries(ticker_data(),type = plot_type, name= input$ticker, 
-                bar.type = "ohlc",theme = "white")
+                bar.type = "ohlc", plot= TRUE, theme = "white")
     
    # ggplot(ticker_data, aes(x = date, y = close)) +
      # geom_(color = "black") +
@@ -77,6 +76,14 @@ server <- function(input, output) {
   # Create a table of the stock data
   output$data <- renderTable(data.frame(ticker_data()[tail(1:nrow(ticker_data()), 5), 1:5]), spacing = "xs", rownames= TRUE,
                              striped=TRUE, hover=TRUE)
+  
+  output$prediction_result <- renderText({
+    prediction <- predict_result()
+    
+    # Format and display the prediction result
+    # Example: return(paste0("Prediction: ", prediction))
+  })
+  
 }
 
 # Run app
