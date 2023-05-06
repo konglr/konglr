@@ -2,6 +2,7 @@ library(quantmod)
 library(abind)
 library(reticulate)
 library(xts)
+library(keras)
 
 #use_condaenv(condaenv = "base", conda = "auto", required = TRUE)
 #use_python('/Users/clarkkong/Library/r-miniconda-arm64/envs/r-reticulate/bin/python', required = TRUE)
@@ -12,6 +13,7 @@ getSymbols("300418.SZ", src="yahoo", auto.assign = TRUE )
 
  ## read data from RDS files
 setwd("/Users/clarkkong/R Projects/konglr/stock_prediction")
+setwd("/Users/clarkkong/R Projects/konglr/stock_prediction/Stock_Price_Prediction")
 saveRDS(`000001.SZ`, file = "000001_yahoo.rds")
 PAYH<- readRDS("000001_yahoo.rds")
 
@@ -54,29 +56,29 @@ mySMA <- lapply(c(5,10,20), function(n) {SMA(ticker[, 4], n = n)})
 mySMA_matrix <- do.call(cbind, mySMA)
 
 # 均线
-SMA10 <- SMA(stock_data$Close, n = 10)
-SMA20 <- SMA(stock_data$Close, n = 20)
+SMA10 <- SMA(ticker[,4], n = 10)
+SMA20 <- SMA(ticker[,4], n = 20)
 mySMA <- lapply(c(5,10,20), function(n) {SMA(ticker[, 4], n = n)})
 mySMA_matrix <- do.call(cbind, mySMA)
 
 # 指数移动平均线（EMA）
-EMA10 <- EMA(stock_data$Close, n = 10)
-EMA20 <- EMA(stock_data$Close, n = 20)
+EMA10 <- EMA(ticker[,4], n = 10)
+EMA20 <- EMA(ticker[,4], n = 20)
 
 # 相对强弱指数（RSI）
-RSI14 <- RSI(stock_data$Close, n = 14)
+RSI14 <- RSI(ticker[,4], n = 14)
 
 # 移动平均收敛/发散指标（MACD）
-MACD <- MACD(stock_data$Close)
+MACD <- MACD(ticker[,4])
 
 # 布林带
-BOLL <- BBands(stock_data$Close)
+BOLL <- BBands(ticker[,4])
 
 # 威廉指标
-WILLR <- WPR(stock_data$High, stock_data$Low, stock_data$Close, n = 14)
+WILLR <- WPR(ticker[,3], ticker$Low, ticker[,4], n = 14)
 
 # 交易量指标
-OBV <- OBV(stock_data$Close, stock_data$Volume)
+OBV <- OBV(ticker[,4], ticker[,5])
 #train_x <- array_reshape(x=as.matrix(ticker[(start_row+1) :train_data_end , 1:n_factors]), dim = c(train_data, days_back, n_factors))
 #x_test <- array_reshape(x=as.matrix(ticker[7609:7668, 1:n_factors]), dim = c(12, days_back , n_factors))
 #train_y <- as.matrix(ticker[seq((start_row+days_back+1), (train_data_end+1), days_back),1:4])
@@ -168,8 +170,8 @@ history <- model %>% fit(
 
 
 #Save models
-#save_model_hdf5(model,'model_PAYH_5_days.h5')
-#model_5_days<-load_model_hdf5('model_PAYH_5_days.h5')
+save_model_hdf5(model,'model_PAYH_5_days.h5')
+model_5_days<-load_model_hdf5('model_PAYH_5_days.h5')
 #y_pred <- model_5_days %>% predict(x_test_daily,reduce_retracing=True)
 
 # Predict on test data

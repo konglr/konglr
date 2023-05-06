@@ -3,12 +3,13 @@
 #
 #    http://shiny.rstudio.com/
 #
-
 library(shiny)
 library(shinyWidgets)
 library(tidyquant)
 library(ggplot2)
 library(quantmod)
+library(tensorflow)
+library(keras)
 # Define UI
 ui <- fluidPage(
   titlePanel("Stock Price Prediction-AI股票价格预测"),
@@ -40,7 +41,7 @@ ui <- fluidPage(
     mainPanel(width = 9,
       plotOutput(outputId = "plot"),
       tableOutput(outputId = "data"),
-      textOutput("prediction_result")
+      tableOutput(outputId = "prediction_result")
     )
   )
 )
@@ -54,6 +55,20 @@ server <- function(input, output) {
     getSymbols(input$ticker,
                from = Sys.Date() - days(input$period),
                to = Sys.Date(), auto.assign = FALSE)
+  })
+  # Load hdf5 Model 
+  model_5_days <- keras::load_model_hdf5("model_PAYH_5_days.h5")
+  
+  predict_result <- reactive({
+    last_five_rows <- tail(ticker_data(), 5) 
+    last_five_data <- last_five_rows[, 1:4]
+    test_5_days_data <- array(0, dim = c(1,5,4))
+    test_5_days_data[1,,] <-test_5_days_data
+      
+    prediction <- predict(model_5_days, test_5_days_data)
+    
+    # Return the prediction result
+    return(prediction)
   })
   
   output$plot <- renderPlot({
@@ -77,11 +92,9 @@ server <- function(input, output) {
   output$data <- renderTable(data.frame(ticker_data()[tail(1:nrow(ticker_data()), 5), 1:5]), spacing = "xs", rownames= TRUE,
                              striped=TRUE, hover=TRUE)
   
-  output$prediction_result <- renderText({
+  output$prediction_result <- renderTable({
     prediction <- predict_result()
-    
-    # Format and display the prediction result
-    # Example: return(paste0("Prediction: ", prediction))
+    data.frame(Prediction = prediction)
   })
   
 }
