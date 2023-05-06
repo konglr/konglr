@@ -8,13 +8,15 @@ library(keras)
 #use_python('/Users/clarkkong/Library/r-miniconda-arm64/envs/r-reticulate/bin/python', required = TRUE)
 #use_condaenv("r-reticulate", required = TRUE)
 #use_python_version()
-getSymbols("300418.SZ", src="yahoo", auto.assign = TRUE )
 
+ticker_names = c("AAPL", "AMZN", "GOOGL", "MSFT", "TSLA","300418.SZ","000001.SZ")
+ticker_data= lapply(ticker_names, function(x) { getSymbols(x, src = "yahoo", auto.assign = FALSE)})
+names(ticker_data) <- ticker_names
 
  ## read data from RDS files
 setwd("/Users/clarkkong/R Projects/konglr/stock_prediction")
 setwd("/Users/clarkkong/R Projects/konglr/stock_prediction/Stock_Price_Prediction")
-saveRDS(`000001.SZ`, file = "000001_yahoo.rds")
+saveRDS(`ticker_data`, file = "ticker_data.rds")
 PAYH<- readRDS("000001_yahoo.rds")
 
 PAYH.A <- adjustOHLC(`PAYH`, use.Adjusted = TRUE)
@@ -39,7 +41,7 @@ tensorflow::set_random_seed(1234)
 days_back <-5
 n_factors <- 4
 n_steps <- 5
-ticker <- adjustOHLC( `300418.SZ`, use.Adjusted = TRUE)
+ticker <- adjustOHLC(ticker_data$300418.SZ, use.Adjusted = TRUE)
 ticker <- na.omit(ticker)
 start_row <- 1
 train_percent <- 0.99
@@ -56,29 +58,29 @@ mySMA <- lapply(c(5,10,20), function(n) {SMA(ticker[, 4], n = n)})
 mySMA_matrix <- do.call(cbind, mySMA)
 
 # 均线
-SMA10 <- SMA(ticker[,4], n = 10)
-SMA20 <- SMA(ticker[,4], n = 20)
+SMA10 <- SMA(Cl(ticker), n = 10)
+SMA20 <- SMA(Cl(ticker), n = 20)
 mySMA <- lapply(c(5,10,20), function(n) {SMA(ticker[, 4], n = n)})
 mySMA_matrix <- do.call(cbind, mySMA)
 
 # 指数移动平均线（EMA）
-EMA10 <- EMA(ticker[,4], n = 10)
-EMA20 <- EMA(ticker[,4], n = 20)
+EMA10 <- EMA(Cl(ticker), n = 10)
+EMA20 <- EMA(Cl(ticker), n = 20)
 
 # 相对强弱指数（RSI）
-RSI14 <- RSI(ticker[,4], n = 14)
+RSI14 <- RSI(Cl(ticker), n = 14)
 
 # 移动平均收敛/发散指标（MACD）
-MACD <- MACD(ticker[,4])
+MACD <- MACD(Cl(ticker))
 
 # 布林带
-BOLL <- BBands(ticker[,4])
+BOLL <- BBands(Cl(ticker))
 
 # 威廉指标
-WILLR <- WPR(ticker[,3], ticker$Low, ticker[,4], n = 14)
+WILLR <- WPR(HLC(ticker), n = 14)
 
 # 交易量指标
-OBV <- OBV(ticker[,4], ticker[,5])
+OBV <- OBV(Cl(ticker), Vo(ticker))
 #train_x <- array_reshape(x=as.matrix(ticker[(start_row+1) :train_data_end , 1:n_factors]), dim = c(train_data, days_back, n_factors))
 #x_test <- array_reshape(x=as.matrix(ticker[7609:7668, 1:n_factors]), dim = c(12, days_back , n_factors))
 #train_y <- as.matrix(ticker[seq((start_row+days_back+1), (train_data_end+1), days_back),1:4])
@@ -144,7 +146,8 @@ model <- keras_model_sequential()
 model %>%
 
   bidirectional(layer_lstm(units = 64, return_sequences = TRUE, input_shape = c(days_back, 7))) %>%
-  layer_lstm(units = 64, return_sequences = FALSE) %>%
+  layer_lstm(units = 128, return_sequences = FALSE) %>%
+  layer_dense(units = 128, activation = "relu") %>%
   layer_dense(units = 64, activation = "relu")  %>%
   layer_dense(units = 4)
 
@@ -213,6 +216,7 @@ summary(diff_pred)
 
 # Save models
 # save_model_hdf5(model,'model_PAYH_5_days_5.h5')
+save_model_hdf5(model,'model_300418_5_days_SMA.h5')
 # load_model_hdf5('model_PAYH_5_days_5.h5')
 
 # Define the SMA input layer
