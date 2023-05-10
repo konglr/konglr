@@ -3,6 +3,7 @@ library(abind)
 library(reticulate)
 library(xts)
 library(keras)
+library(tensorflow)
 
 #use_condaenv(condaenv = "base", conda = "auto", required = TRUE)
 #use_python('/Users/clarkkong/Library/r-miniconda-arm64/envs/r-reticulate/bin/python', required = TRUE)
@@ -14,9 +15,10 @@ ticker_data= lapply(ticker_names, function(x) { getSymbols(x, src = "yahoo", aut
 names(ticker_data) <- ticker_names
 
  ## read data from RDS files
-setwd("/Users/clarkkong/R Projects/konglr/stock_prediction")
+#setwd("/Users/clarkkong/R Projects/konglr/stock_prediction")
 setwd("/Users/clarkkong/R Projects/konglr/stock_prediction/Stock_Price_Prediction")
-saveRDS(`ticker_data`, file = "ticker_data.rds")
+saveRDS(ticker_data, file = "ticker_data.rds")
+ticker_data <- readRDS(file = "ticker_data.rds")
 PAYH<- readRDS("000001_yahoo.rds")
 
 PAYH.A <- adjustOHLC(`PAYH`, use.Adjusted = TRUE)
@@ -30,29 +32,27 @@ chartSeries(to.monthly(PAYH.A), theme = "white")
 chartSeries(to.quarterly(PAYH.A), theme = "white")
 
 
-library(keras)
-library(tensorflow)
-
 # Set seed value for reproducibility
 set.seed(1234)
 tensorflow::set_random_seed(1234)
+
 
 ## Data Preparation
 days_back <-5
 n_factors <- 4
 n_steps <- 5
-ticker <- adjustOHLC(ticker_data$300418.SZ, use.Adjusted = TRUE)
+ticker <- adjustOHLC(ticker_data$AAPL, use.Adjusted = TRUE)
 ticker <- na.omit(ticker)
 start_row <- 1
 train_percent <- 0.99
 train_data <- ceiling(((nrow(ticker)*train_percent)-start_row)/days_back)
-train_data_end <- start_row + train_data * days_back
+train_data_end <- train_data*days_back-days_back+1
 val_percent <- 0.08
 val_data <- ceiling(nrow(ticker)*val_percent/days_back)
 val_data_end <- train_data_end + val_data* days_back
 test_percent <- 0.01
-test_data <-ceiling(nrow(ticker)* test_percent-days_back)
-
+test_data <-ceiling(nrow(ticker)* test_percent-days_back
+                    
 # TTR index
 mySMA <- lapply(c(5,10,20), function(n) {SMA(ticker[, 4], n = n)})
 mySMA_matrix <- do.call(cbind, mySMA)
@@ -145,9 +145,8 @@ for (i in (nrow(ticker)-test_data+1):nrow(ticker)-days_back+1) {
 model <- keras_model_sequential()
 model %>%
 
-  bidirectional(layer_lstm(units = 64, return_sequences = TRUE, input_shape = c(days_back, 7))) %>%
+  bidirectional(layer_lstm(units = 64, return_sequences = TRUE, input_shape = c(days_back, 4))) %>%
   layer_lstm(units = 128, return_sequences = FALSE) %>%
-  layer_dense(units = 128, activation = "relu") %>%
   layer_dense(units = 64, activation = "relu")  %>%
   layer_dense(units = 4)
 
@@ -157,14 +156,15 @@ model %>% compile(
   #loss = "mean_absolute_percentage_error",
   loss = "MSE",
   optimizer = optimizer_rmsprop(learning_rate = 0.001),
+  #optimizer = optimizer_adam(learning_rate = 0.001),
   metrics = c("accuracy")
 )
 
 
-
 history <- model %>% fit(
-  x = train_x_merged[100:1956,,],
-  y = train_y_daily[100:1956,],
+ # x = train_x_merged[100:train_data_end,,],
+  x = train_x_daily[1000:train_data_end,,],
+  y = train_y_daily[1000:train_data_end,],
   batch_size = 1,
   epochs = 10,
   #validation_data = list(val_x, val_y),

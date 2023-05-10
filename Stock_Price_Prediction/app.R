@@ -81,7 +81,7 @@ server <- function(input, output) {
                         "matchsticks" = "matchsticks")
     
     chartSeries(ticker_data(),type = plot_type, name= input$ticker, 
-                bar.type = "ohlc", plot= TRUE, theme = "white")
+               plot= TRUE, theme = "white")
     
    # ggplot(ticker_data, aes(x = date, y = close)) +
      # geom_(color = "black") +
@@ -93,8 +93,8 @@ server <- function(input, output) {
                              striped=TRUE, hover=TRUE)
   
   output$prediction_result <- renderTable({
-    prediction <- predict_result()
-    data.frame(Prediction = prediction)
+    #data.frame(predict_result())
+    data.frame(tail(ticker_data(), 5))
   })
   
 }
