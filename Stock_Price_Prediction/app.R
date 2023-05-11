@@ -10,6 +10,7 @@ library(ggplot2)
 library(quantmod)
 library(tensorflow)
 library(keras)
+library(TTR)
 # Define UI
 ui <- fluidPage(
   titlePanel("Stock Price Prediction-AI股票价格预测"),
@@ -53,7 +54,8 @@ server <- function(input, output) {
   # Get data
   ticker_data <<-  reactive({
     getSymbols(input$ticker,
-               from = Sys.Date() - days(input$period),
+               #from = Sys.Date() - days(input$period),
+               from = Sys.Date() - 400,
                to = Sys.Date(), auto.assign = FALSE)
   })
   # Load hdf5 Model 
@@ -76,12 +78,16 @@ server <- function(input, output) {
     # Plot data
     plot_type <- switch(input$plot_type,
                         "line" = "line",
-                        "bar" = "bars",
+                        "bars" = "bars",
                         "candlesticks" = "candlesticks",
                         "matchsticks" = "matchsticks")
     
-    chartSeries(ticker_data(),type = plot_type, name= input$ticker, 
-               plot= TRUE, theme = "white")
+    chartSeries(ticker_data(), type = plot_type, name= input$ticker, theme = "white",
+                subset = paste("last",input$period, "day",sep = " "))
+    addSMA(n=5,  col = "brown")
+    addSMA(n=10, col = "purple")
+    addSMA(n=20, col = "orange")
+ 
     
    # ggplot(ticker_data, aes(x = date, y = close)) +
      # geom_(color = "black") +
@@ -93,8 +99,8 @@ server <- function(input, output) {
                              striped=TRUE, hover=TRUE)
   
   output$prediction_result <- renderTable({
-    #data.frame(predict_result())
-    data.frame(tail(ticker_data(), 5))
+    data.frame(predict_result())
+    #data.frame(tail(ticker_data(), 5))
   })
   
 }

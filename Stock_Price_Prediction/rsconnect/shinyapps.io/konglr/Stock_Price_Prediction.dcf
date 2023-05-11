@@ -5,9 +5,10 @@ account: konglr
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 8956687
-bundleId: 7182513
+bundleId: 7202324
 url: https://konglr.shinyapps.io/Stock_Price_Prediction/
-when: 1683386510.30879
-lastSyncTime: 1683386510.30881
+when: 1683773970.87034
+lastSyncTime: 1683773970.87036
 asMultiple: FALSE
 asStatic: FALSE
+ignoredFiles: ticker_data.rds

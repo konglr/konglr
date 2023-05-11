@@ -22,7 +22,7 @@ ticker_data <- readRDS(file = "ticker_data.rds")
 PAYH<- readRDS("000001_yahoo.rds")
 
 PAYH.A <- adjustOHLC(`PAYH`, use.Adjusted = TRUE)
-chartSeries(ticker, subset = "last 1 year",theme = "white")
+chartSeries(AAPL, subset = "last 1 year",theme = "white")
 addSMA(n=5, with.col= Cl, col = "purple")
 addSMA(n=10, col = "orange")
 addSMA(n=20, col = "red")
