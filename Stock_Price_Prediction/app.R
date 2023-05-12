@@ -1,4 +1,4 @@
-#
+
 # Find out more about building applications with Shiny here:
 #
 #    http://shiny.rstudio.com/
@@ -11,6 +11,23 @@ library(quantmod)
 library(tensorflow)
 library(keras)
 library(TTR)
+library(htmltools)
+
+tags$head(
+  tags$script(
+    type = "text/javascript",
+    src = "https://www.googletagmanager.com/gtag/js?id=G-8LL329L0WC"
+  ),
+  tags$script(
+    "
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-8LL329L0WC');
+      "
+  )
+)
+    
 # Define UI
 ui <- fluidPage(
   titlePanel("Stock Price Prediction-AI股票价格预测"),
