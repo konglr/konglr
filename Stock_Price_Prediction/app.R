@@ -13,23 +13,23 @@ library(keras)
 library(TTR)
 library(htmltools)
 
-tags$head(
-  tags$script(
-    type = "text/javascript",
-    src = "https://www.googletagmanager.com/gtag/js?id=G-8LL329L0WC"
-  ),
-  tags$script(
-    "
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'G-8LL329L0WC');
-      "
-  )
-)
-    
+
+  
 # Define UI
 ui <- fluidPage(
+  HTML('
+       <head>
+        <!-- Google tag (gtag.js) -->
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-8LL329L0WC"></script>
+        <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag("js", new Date());
+          gtag("config", "G-8LL329L0WC");
+        </script>
+        </head>
+      '),
+  
   titlePanel("Stock Price Prediction-AI股票价格预测"),
   sidebarLayout(
     sidebarPanel(width = 3,
@@ -101,9 +101,9 @@ server <- function(input, output) {
     
     chartSeries(ticker_data(), type = plot_type, name= input$ticker, theme = "white",
                 subset = paste("last",input$period, "day",sep = " "))
-    addSMA(n=5,  col = "brown")
-    addSMA(n=10, col = "purple")
-    addSMA(n=20, col = "orange")
+    addSMA(n=5, on=1, col = "brown")
+    addSMA(n=10, on=1, col = "purple")
+    addSMA(n=20, on=1, col = "orange")
  
     
    # ggplot(ticker_data, aes(x = date, y = close)) +
