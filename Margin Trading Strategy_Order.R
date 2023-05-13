@@ -48,7 +48,7 @@ cash_invest <-300000 # 初始资金
 cash <- cash_invest  
 shares_to_buy <- 100
 shares <- 0    # 持有股票数量
-max_shares_hold <-1000 # Max shares to hold
+max_shares_hold <-10000 # Max shares to hold
 orders_to_buy <- 0  #Date and share
 orders_to_sell<- 0  #Date and share
 stop_loss_triggered<-0 
@@ -90,26 +90,31 @@ for (i in 22:nrow(ticker)) {
 # Backtest Trading
 
 for (i in (nrow(ticker)-trade_back_days):nrow(ticker)) {
- 
+  
   # sma & Value修正卖出策略
   if(sma5[i] > sma10[i]){
     sell_margin_threshold <- sell_margin_threshold_H 
   }else
   {sell_margin_threshold <- sell_margin_threshold_L}
   
-  if (buy_signal[i] == 1) {
+  # Clean up Temp data 
+   cash_to_receive <- 0 # cleanup the temp date
+   sell_shares_today<-0
+   
+   # Buying Excution
+   if (buy_signal[i] == 1) {
     # First share buy
     if (shares == 0 & as.numeric(sma5[i-1]) < as.numeric(sma10[i-1])) { 
       shares <- shares + shares_to_buy
       open_portfolio_value <- shares_to_buy * as.numeric(Cl(ticker[i]))
-      cash <- cash - open_portfolio_value
+      cash <- cash - shares_to_buy * as.numeric(Cl(ticker[i]))
       orders_to_buy <-  orders_to_buy + 1
       portfolio[i, "BuyOrder"] <- shares
       orders[i, "OrderType"] <- 1
       orders[i, "OpenDate"] <- index(ticker[i])
       orders[i, "OpenShares"] <- shares_to_buy
       orders[i, "HoldShares"] <- shares_to_buy
-      orders[i, "Openprice"] <- as.numeric(Cl(ticker[i]))
+      orders[i, "OpenPrice"] <- as.numeric(Cl(ticker[i]))
       orders[i, "OrderStatus"] <- 1
     } 
     else {
@@ -130,27 +135,27 @@ for (i in (nrow(ticker)-trade_back_days):nrow(ticker)) {
     }
   }
   # Execute Margin Sell Signal
+  
    for (l in which(orders$OrderStatus == 1)) {
-       
      if ((orders$OpenShares[l] * as.numeric(Cl(ticker[i]))) > (orders$OpenShares[l] * as.numeric(orders$OpenPrice[l]) * sell_margin_threshold) 
          && sell_signal[i] == 1 ) {
        
-    cash_to_receive <- shares * as.numeric(Cl(ticker[i]))
-    cash <- cash + cash_to_receive
-    portfolio[i, "SellOrder"] <- shares
-    portfolio[i, "Profit"] <- cash_to_receive - open_portfolio_value
-    shares <- shares-as.numeric(orders$OpenShares[l])
+    cash_to_receive <- cash_to_receive + shares_to_buy * as.numeric(Cl(ticker[i]))
+    cash <- cash + shares_to_buy * as.numeric(Cl(ticker[i]))
+    shares <- shares - as.numeric(orders$OpenShares[l])
+    sell_shares_today <-sell_shares_today+shares-shares_to_buy
     orders_to_sell <- orders_to_sell + 1
-    open_portfolio_value <- open_portfolio_value- (orders$OpenShares[l] * as.numeric(orders$OpenPrice[l])
-
+    open_portfolio_value <- open_portfolio_value - (as.numeric(orders$OpenShares[l]) * as.numeric(orders$OpenPrice[l]))
+    
     orders[l, "CloseDate"] <- index(ticker[i])
     orders[l, "HoldShares"] <- orders$OpenShares[l] - shares_to_buy
     orders[l, "ClosePrice"] <- as.numeric(Cl(ticker[i]))
+    orders[l, "Profit"] <-   orders$OpenShares[l] * (as.numeric(Cl(ticker[i]))- as.numeric(orders$OpenPrice[l]))
     orders[l, "CloseType"] <- 1
     orders[l, "OrderStatus"] <- 0
      }
   }
-  
+   
   # Stop loss triggered
   if (open_portfolio_value > 0 
       & (shares * as.numeric(Cl(ticker[i]))) < (stop_loss_percent * open_portfolio_value)) {
@@ -159,8 +164,9 @@ for (i in (nrow(ticker)-trade_back_days):nrow(ticker)) {
        cash_to_receive <- cash_to_receive + 
          (as.numeric(orders$OpenShares[m]) * as.numeric(Cl(ticker[i])))
        cash <- cash + cash_to_receive 
-       open_portfolio_value <- open_portfolio_value- (orders$OpenShares[l] * orders$OpenPrice[l])
+       open_portfolio_value <- open_portfolio_value - (as.numeric(orders$OpenShares[l]) * as.numeric(orders$OpenPrice[l]))
        shares = shares-shares_to_buy
+       sell_shares_today <-sell_shares_today+shares-shares_to_buy
        orders[m, "CloseDate"] <- index(ticker[i])
        orders[m, "HoldShares"] <- orders$OpenShares[l] -shares_to_buy
        orders[m, "ClosePrice"] <- as.numeric(Cl(ticker[i]))
@@ -183,9 +189,11 @@ for (i in (nrow(ticker)-trade_back_days):nrow(ticker)) {
   }
   
   # Record every day trading
+  portfolio[i, "SellOrder"] <- sell_shares_today
+  portfolio[i, "Profit"] <- cash_to_receive - open_portfolio_value
   portfolio[i, "PortfolioValue"] <- cash + shares * as.numeric(Cl(ticker[i]))
   portfolio[i, "SharesHold"] <- shares
-  portfolio[i, "Margin"] <- shares * as.numeric(Cl(ticker[i]))-open_portfolio_value
+  portfolio[i, "Margin"] <-  shares * as.numeric(Cl(ticker[i])) - open_portfolio_value
 }
 
 tail(portfolio, n = 1)
